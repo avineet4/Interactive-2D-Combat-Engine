@@ -41,6 +41,7 @@ export class TitleScene {
       ["score-Z", [136, 125, 10, 10]],
       ["score- ", [0, 0, 10, 10]],
       ["arrow", [176, 93, 4, 4]],
+      ["score-|", [167, 149, 4, 11]],
     ]);
 
     this.changeScene = changeScene;
@@ -181,7 +182,7 @@ export class TitleScene {
     this.drawTitleScene(context);
 
     this.drawTitle(context, "PRESS TO START", 130, 170, 0.7, 0.7);
-    this.drawTitle(context, "CREATE ROOM @SOON", 130, 183, 0.7, 0.7);
+    this.drawTitle(context, "CREATE |JOIN ROOM @SOON", 130, 183, 0.7, 0.7);
     this.drawTitle(context, "AI VS PLAYER @SOON", 130, 196, 0.7, 0.7);
 
     // Draw the arrow
