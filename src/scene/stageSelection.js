@@ -1,5 +1,4 @@
 import { SCENE_WIDTH } from "../constants/stage.js";
-import { BattleScene } from "./BattleScene.js";
 import { gameState } from "../states/gameState.js";
 import { ContextHandler } from "../engine/contextHandler.js";
 import { KenStage } from "../entities/stages/ken-stage.js";

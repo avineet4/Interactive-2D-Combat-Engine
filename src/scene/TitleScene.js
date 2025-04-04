@@ -1,5 +1,4 @@
 import { ContextHandler } from "../engine/contextHandler.js";
-import { BattleScene } from "./BattleScene.js";
 import { playSound, stopSound } from "../engine/soundHandler.js";
 import { StageSelectionScene } from "./stageSelection.js";
 
@@ -56,7 +55,6 @@ export class TitleScene {
   }
 
   setupInput() {
-    this.clickHandler = this.handleClick.bind(this);
     this.keyDownHandler = this.handleKeyDown.bind(this);
     document.addEventListener("click", this.clickHandler);
     document.addEventListener("keydown", this.keyDownHandler);
