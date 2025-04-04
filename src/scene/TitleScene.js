@@ -84,23 +84,6 @@ export class TitleScene {
     }
   }
 
-  handleClick(event) {
-    if (this.isTransitioning) return;
-
-    // Check if click is near an option to select it
-    const rect = event.target.getBoundingClientRect();
-    const clickY = event.clientY - rect.top;
-    for (let i = 0; i < this.optionYPositions.length; i++) {
-      if (Math.abs(clickY - this.optionYPositions[i]) < 15) {
-        this.selectedOption = i;
-        if (this.selectedOption === 0) {
-          this.startGame();
-        }
-        break;
-      }
-    }
-  }
-
   startGame() {
     if (this.selectedOption !== 0 || this.isTransitioning) return; // Only proceed if on "PRESS TO START"
 
