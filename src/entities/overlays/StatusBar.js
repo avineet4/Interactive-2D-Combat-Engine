@@ -292,9 +292,9 @@ export class StatusBar {
   drawScores(context) {
     this.drawScoreLabel(context, "DHRUV", 4);
     this.drawScore(context, gameState.fighters[0].score, 45);
-    this.drawScoreLabel(context, "2DCOMBATENGIN", 133);
+    this.drawScoreLabel(context, "2DCOMBATPROJECT", 122);
 
-    this.drawScoreLabel(context, "PROJECT", 269);
+    this.drawScoreLabel(context, "P2", 305);
     this.drawScore(context, gameState.fighters[1].score, 309);
   }
 

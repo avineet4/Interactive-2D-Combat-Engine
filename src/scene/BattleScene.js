@@ -220,6 +220,7 @@ export class BattleScene {
     if (this.changeScene) {
       setTimeout(() => {
         console.log("Changing scene now");
+        stopSound(this.stage.music);
 
         this.changeScene(new TitleScene(this.changeScene));
       }, 6000); // Delay before changing scenes after victory animation
