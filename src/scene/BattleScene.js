@@ -182,13 +182,6 @@ export class BattleScene {
       this.loserId = 0;
       this.winnerId = 1;
       this.startBattleEnd(this.loserId, this.winnerId, time);
-    } else {
-      // Schedule scene change after a delay for draw scenario
-      if (this.changeScene && typeof this.changeScene === "function") {
-        setTimeout(() => {
-          this.changeScene();
-        }, 4000);
-      }
     }
   }
 
@@ -217,14 +210,12 @@ export class BattleScene {
   // Function to handle scene change after victory animation
   completeEndSequence() {
     // If we have a scene change function, call it after a delay
-    if (this.changeScene) {
-      setTimeout(() => {
-        console.log("Changing scene now");
-        stopSound(this.stage.music);
 
-        this.changeScene(new TitleScene(this.changeScene));
-      }, 6000); // Delay before changing scenes after victory animation
-    }
+    setTimeout(() => {
+      console.log("Changing scene now");
+      stopSound(this.stage.music);
+      location.reload();
+    }, 5000); // Delay before changing scenes after victory animation
   }
 
   startRound() {
