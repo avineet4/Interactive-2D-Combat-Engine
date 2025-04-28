@@ -1,5 +1,6 @@
 import { Control, controls } from "../constants/control.js";
 import { FighterDirection } from "../constants/fighter.js";
+import { gestureHandler } from "./gestureHandler.js";
 
 const heldKey = new Set(); //! Since Set only keeps unique values, duplicate key presses won’t be added multiple times.
 const pressedKeys = new Set();
@@ -8,6 +9,7 @@ function handleKeyDown(event) {
   event.preventDefault();
 
   heldKey.add(event.code);
+  gestureHandler.handleKeyDown(event);
 }
 
 function handleKeyUp(event) {
@@ -17,14 +19,40 @@ function handleKeyUp(event) {
   pressedKeys.delete(event.code);
 }
 
-export function registerKeyboardEvents() {
+export async function registerKeyboardEvents() {
   addEventListener("keydown", handleKeyDown);
   addEventListener("keyup", handleKeyUp);
+  
+  // Initialize gesture handler
+  await gestureHandler.initialize();
 }
 
-export const isKeyDown = (code) => heldKey.has(code);
+export const isKeyDown = (code) => {
+  // For player 1 (Ryu), check gestures
+  if (controls[0].keyboard[Control.LEFT] === code) return gestureHandler.isGestureActive(Control.LEFT);
+  if (controls[0].keyboard[Control.RIGHT] === code) return gestureHandler.isGestureActive(Control.RIGHT);
+  if (controls[0].keyboard[Control.UP] === code) return gestureHandler.isGestureActive(Control.UP);
+  if (controls[0].keyboard[Control.DOWN] === code) return gestureHandler.isGestureActive(Control.DOWN);
+  if (controls[0].keyboard[Control.LIGHT_PUNCH] === code) return gestureHandler.isGestureActive(Control.LIGHT_PUNCH);
+  if (controls[0].keyboard[Control.MEDIUM_PUNCH] === code) return gestureHandler.isGestureActive(Control.MEDIUM_PUNCH);
+  if (controls[0].keyboard[Control.HEAVY_PUNCH] === code) return gestureHandler.isGestureActive(Control.HEAVY_PUNCH);
+  if (controls[0].keyboard[Control.MEDIUM_KICK] === code) return gestureHandler.isGestureActive(Control.MEDIUM_KICK);
+  if (controls[0].keyboard[Control.HEAVY_KICK] === code) return gestureHandler.isGestureActive(Control.HEAVY_KICK);
+  
+  // For all other controls, use keyboard
+  return heldKey.has(code);
+};
 export const isKeyUP = (code) => !heldKey.has(code);
 export function iskeyPressed(code) {
+  // For player 1 (Ryu), check gestures for attacks
+  if (controls[0].keyboard[Control.LIGHT_PUNCH] === code) return gestureHandler.isGestureActive(Control.LIGHT_PUNCH);
+  if (controls[0].keyboard[Control.MEDIUM_PUNCH] === code) return gestureHandler.isGestureActive(Control.MEDIUM_PUNCH);
+  if (controls[0].keyboard[Control.HEAVY_PUNCH] === code) return gestureHandler.isGestureActive(Control.HEAVY_PUNCH);
+  if (controls[0].keyboard[Control.LIGHT_KICK] === code) return gestureHandler.isGestureActive(Control.LIGHT_KICK);
+  if (controls[0].keyboard[Control.MEDIUM_KICK] === code) return gestureHandler.isGestureActive(Control.MEDIUM_KICK);
+  if (controls[0].keyboard[Control.HEAVY_KICK] === code) return gestureHandler.isGestureActive(Control.HEAVY_KICK);
+
+  // For keyboard controls
   if (heldKey.has(code) && !pressedKeys.has(code)) {
     pressedKeys.add(code);
     return true;
