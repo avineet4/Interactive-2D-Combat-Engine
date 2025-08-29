@@ -4,6 +4,19 @@ import { FighterDirection } from "../constants/fighter.js";
 const heldKey = new Set(); //! Since Set only keeps unique values, duplicate key presses won’t be added multiple times.
 const pressedKeys = new Set();
 
+const playerInputEnabled = {
+  0: true,
+  1: true,
+};
+
+export function setPlayerInput(id, enabled) {
+  playerInputEnabled[id] = enabled;
+}
+
+export function isPlayerInputEnabled(id) {
+  return playerInputEnabled[id];
+}
+
 function handleKeyDown(event) {
   event.preventDefault();
 
@@ -31,34 +44,49 @@ export function iskeyPressed(code) {
   }
   return false;
 }
-export const isleft = (id) => isKeyDown(controls[id].keyboard[Control.LEFT]);
-export const isright = (id) => isKeyDown(controls[id].keyboard[Control.RIGHT]);
-export const isup = (id) => isKeyDown(controls[id].keyboard[Control.UP]);
-export const isdown = (id) => isKeyDown(controls[id].keyboard[Control.DOWN]);
+export const isleft = (id) =>
+  playerInputEnabled[id] && isKeyDown(controls[id].keyboard[Control.LEFT]);
+export const isright = (id) =>
+  playerInputEnabled[id] && isKeyDown(controls[id].keyboard[Control.RIGHT]);
+export const isup = (id) =>
+  playerInputEnabled[id] && isKeyDown(controls[id].keyboard[Control.UP]);
+export const isdown = (id) =>
+  playerInputEnabled[id] && isKeyDown(controls[id].keyboard[Control.DOWN]);
 export const isControlDown = (id) =>
+  playerInputEnabled[id] &&
   isKeyDown(controls[id].keyboard[Control.LIGHT_PUNCH]);
 
 export const isControlPressed = (id) =>
+  playerInputEnabled[id] &&
   iskeyPressed(controls[id].keyboard[Control.LIGHT_PUNCH]);
 export const isForward = (id, direction) =>
-  direction === FighterDirection.Right ? isright(id) : isleft(id);
+  playerInputEnabled[id] &&
+  (direction === FighterDirection.Right ? isright(id) : isleft(id));
 
 export const isBackward = (id, direction) =>
-  direction === FighterDirection.Left ? isright(id) : isleft(id);
+  playerInputEnabled[id] &&
+  (direction === FighterDirection.Left ? isright(id) : isleft(id));
 
 export const isIdle = (id) =>
+  playerInputEnabled[id] &&
   !(isleft(id) || isright(id) || isup(id) || isdown(id));
 
 export const isLightPunch = (id) =>
+  playerInputEnabled[id] &&
   iskeyPressed(controls[id].keyboard[Control.LIGHT_PUNCH]);
 export const isMediumPunch = (id) =>
+  playerInputEnabled[id] &&
   iskeyPressed(controls[id].keyboard[Control.MEDIUM_PUNCH]);
 export const isHeavyPunch = (id) =>
+  playerInputEnabled[id] &&
   iskeyPressed(controls[id].keyboard[Control.HEAVY_PUNCH]);
 
 export const isLightKick = (id) =>
+  playerInputEnabled[id] &&
   iskeyPressed(controls[id].keyboard[Control.LIGHT_KICK]);
 export const isMediumKick = (id) =>
+  playerInputEnabled[id] &&
   iskeyPressed(controls[id].keyboard[Control.MEDIUM_KICK]);
 export const isHeavyKick = (id) =>
+  playerInputEnabled[id] &&
   iskeyPressed(controls[id].keyboard[Control.HEAVY_KICK]);
