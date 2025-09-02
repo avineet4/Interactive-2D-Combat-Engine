@@ -19,6 +19,8 @@ import { LightHitSplash } from "../entities/fighter/shared/LightHitSplash.js";
 import { MediumHitSplash } from "../entities/fighter/shared/MediumHitSplash.js";
 import { HeavyHitSplash } from "../entities/fighter/shared/heavyHitSplash.js";
 import { stopSound } from "../engine/soundHandler.js";
+import { AISystem } from "../ai/AISystem.js";
+import { AIControls } from "../ai/AIControls.js";
 
 export class BattleScene {
   constructor(changeScene = null) {
@@ -43,6 +45,11 @@ export class BattleScene {
     this.stage = this.createStage();
     this.changeScene = changeScene;
 
+    // Initialize AI System with the provided API key
+    this.aiSystem = new AISystem("AIzaSyC-Cad_QDRzNj9cKB_R5u956i1hdznQwpY");
+    this.aiControls = null;
+    this.initializeAI();
+
     this.startRound();
 
     this.overlays = [new StatusBar(this.fighters, this.onTimeEnd.bind(this))];
@@ -66,6 +73,29 @@ export class BattleScene {
       default:
         console.log("Creating Ken stage");
         return new KenStage();
+    }
+  }
+
+  async initializeAI() {
+    try {
+      await this.aiSystem.initialize();
+      
+      // Setup AI vs Human by default (Player 1 is AI)
+      // You can change this setup as needed
+      this.aiSystem.setupAIVsHuman(1);
+      
+      // Enable debug mode for development
+      this.aiSystem.setDebugMode(true);
+      
+      // Create AI controls interface
+      this.aiControls = new AIControls(this.aiSystem);
+      this.aiControls.show();
+      this.aiControls.startStatusUpdates();
+      
+      console.log("AI System initialized successfully");
+      console.log("Press Ctrl+I to toggle AI controls");
+    } catch (error) {
+      console.error("Failed to initialize AI System:", error);
     }
   }
 
@@ -282,13 +312,18 @@ export class BattleScene {
     });
   };
 
-  update(time, context) {
+  async update(time, context) {
     // Always update these components regardless of battle state
     this.updateShadows(time);
     this.stage.update(time);
     this.updateEntities(time, context);
     this.camera.update(time, context);
     this.updateOverlays(time, context);
+
+    // Update AI system if available
+    if (this.aiSystem && this.fighters && this.fighters.length >= 2) {
+      await this.aiSystem.update(this.fighters, this, time);
+    }
 
     // Only update fighters if battle hasn't ended
     if (!this.battleEnded) {
