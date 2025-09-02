@@ -138,7 +138,7 @@ export class AIControls {
         this.aiSystem.setupHumanVsHuman();
         break;
       case 'ai-vs-human':
-        this.aiSystem.setupAIVsHuman(1);
+        this.aiSystem.setupAIVsHuman(0);
         break;
       case 'ai-vs-ai':
         this.aiSystem.setupAIVsAI();

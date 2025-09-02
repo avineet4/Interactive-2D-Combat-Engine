@@ -52,8 +52,8 @@ import { AISystem } from './src/ai/AISystem.js';
 const aiSystem = new AISystem('YOUR_API_KEY');
 await aiSystem.initialize();
 
-// Setup AI vs Human (Player 1 is AI)
-aiSystem.setupAIVsHuman(1);
+// Setup AI vs Human (Player 0 is AI - Ryu)
+aiSystem.setupAIVsHuman(0);
 
 // Update in your game loop
 await aiSystem.update(fighters, battleScene, frameTime);

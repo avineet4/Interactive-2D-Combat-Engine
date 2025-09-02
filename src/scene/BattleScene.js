@@ -80,9 +80,9 @@ export class BattleScene {
     try {
       await this.aiSystem.initialize();
       
-      // Setup AI vs Human by default (Player 1 is AI)
-      // You can change this setup as needed
-      this.aiSystem.setupAIVsHuman(1);
+      // Setup AI vs Human by default (Player 0 is AI - Ryu)
+      // Player 1 is Human - Ken
+      this.aiSystem.setupAIVsHuman(0);
       
       // Enable debug mode for development
       this.aiSystem.setDebugMode(true);
