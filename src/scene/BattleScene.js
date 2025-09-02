@@ -87,6 +87,9 @@ export class BattleScene {
       // Enable debug mode for development
       this.aiSystem.setDebugMode(true);
       
+      // Update fighter controls based on initial AI setup
+      this.updateFighterControls();
+      
       // Create AI controls interface
       this.aiControls = new AIControls(this.aiSystem);
       this.aiControls.show();
@@ -312,6 +315,24 @@ export class BattleScene {
     });
   };
 
+  // Update fighter controls based on AI status
+  updateFighterControls() {
+    if (!this.fighters || !this.aiSystem) return;
+
+    this.fighters.forEach((fighter, playerId) => {
+      if (fighter) {
+        // Disable keyboard controls if AI is active for this player
+        const isAIActive = this.aiSystem.isAIEnabled(playerId);
+        fighter.controlsEnabled = !isAIActive;
+        
+        // Optional: Log control changes for debugging
+        if (this.aiSystem.debugMode && fighter.controlsEnabled !== !isAIActive) {
+          console.log(`Player ${playerId} (${fighter.constructor.name}) controls: ${fighter.controlsEnabled ? 'enabled' : 'disabled (AI active)'}`);
+        }
+      }
+    });
+  }
+
   async update(time, context) {
     // Always update these components regardless of battle state
     this.updateShadows(time);
@@ -323,6 +344,9 @@ export class BattleScene {
     // Update AI system if available
     if (this.aiSystem && this.fighters && this.fighters.length >= 2) {
       await this.aiSystem.update(this.fighters, this, time);
+      
+      // Disable keyboard controls for AI-controlled fighters
+      this.updateFighterControls();
     }
 
     // Only update fighters if battle hasn't ended

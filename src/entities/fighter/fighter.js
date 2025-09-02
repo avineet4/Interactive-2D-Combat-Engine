@@ -498,6 +498,12 @@ export class Fighter {
   }
 
   handleWalkForwardState() {
+    // If controls are disabled, transition to idle
+    if (!this.controlsEnabled) {
+      this.changeState(FighterState.IDLE);
+      return;
+    }
+
     if (!Control.isForward(this.playerId, this.direction)) {
       this.changeState(FighterState.IDLE);
     } else if (Control.isup(this.playerId))
@@ -521,6 +527,12 @@ export class Fighter {
   }
 
   handleWalkBackwardState() {
+    // If controls are disabled, transition to idle
+    if (!this.controlsEnabled) {
+      this.changeState(FighterState.IDLE);
+      return;
+    }
+
     if (!Control.isBackward(this.playerId, this.direction)) {
       this.changeState(FighterState.IDLE);
     } else if (Control.isup(this.playerId))
@@ -544,6 +556,12 @@ export class Fighter {
   }
 
   handleCrouchState() {
+    // If controls are disabled, transition to crouch up (return to idle)
+    if (!this.controlsEnabled) {
+      this.changeState(FighterState.CROUCH_UP);
+      return;
+    }
+
     if (!Control.isdown(this.playerId))
       this.changeState(FighterState.CROUCH_UP);
 
@@ -569,6 +587,12 @@ export class Fighter {
 
   handleJumpStartState() {
     if (this.isAnimationCompleted()) {
+      // If controls are disabled, just jump straight up
+      if (!this.controlsEnabled) {
+        this.changeState(FighterState.JUMP_UP);
+        return;
+      }
+
       if (Control.isBackward(this.playerId, this.direction)) {
         this.changeState(FighterState.JUMP_BACKWARDS);
       } else if (Control.isForward(this.playerId, this.direction)) {
