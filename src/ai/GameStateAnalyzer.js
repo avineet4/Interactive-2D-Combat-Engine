@@ -127,12 +127,90 @@ export class GameStateAnalyzer {
     const dx = opponent.position.x - aiFighter.position.x;
     const dy = opponent.position.y - aiFighter.position.y;
     
+    // Enhanced detection for jumping over scenarios
+    const isOpponentJumping = this.isJumping(opponent);
+    const isOpponentAbove = dy > 10; // Increased threshold for better detection
+    const isOpponentBelow = dy < -10;
+    
+    // Detect if opponent has jumped over the AI
+    const hasOpponentJumpedOver = this.detectJumpOver(aiFighter, opponent);
+    
+    // Calculate if AI needs to turn based on current and previous positions
+    const needsToTurn = this.calculateTurnNeeded(aiFighter, opponent);
+    
     return {
       horizontal: dx > 0 ? 'right' : dx < 0 ? 'left' : 'aligned',
-      vertical: dy > 5 ? 'above' : dy < -5 ? 'below' : 'same',
+      vertical: isOpponentAbove ? 'above' : isOpponentBelow ? 'below' : 'same',
       isOpponentInFront: (aiFighter.direction > 0 && dx > 0) || (aiFighter.direction < 0 && dx < 0),
-      needsToTurn: (aiFighter.direction > 0 && dx < 0) || (aiFighter.direction < 0 && dx > 0)
+      needsToTurn: needsToTurn,
+      hasOpponentJumpedOver: hasOpponentJumpedOver,
+      isOpponentJumping: isOpponentJumping,
+      isOpponentAbove: isOpponentAbove,
+      isOpponentBelow: isOpponentBelow,
+      horizontalDistance: Math.abs(dx),
+      verticalDistance: Math.abs(dy)
     };
+  }
+
+  /**
+   * Detect if opponent has jumped over the AI
+   * @param {Object} aiFighter - AI fighter
+   * @param {Object} opponent - Opponent fighter
+   * @returns {boolean} True if opponent jumped over
+   */
+  detectJumpOver(aiFighter, opponent) {
+    // Check if opponent is jumping and above the AI
+    if (!this.isJumping(opponent) || opponent.position.y <= aiFighter.position.y) {
+      return false;
+    }
+    
+    // Check if opponent is close horizontally but above vertically
+    const horizontalDistance = Math.abs(opponent.position.x - aiFighter.position.x);
+    const verticalDistance = opponent.position.y - aiFighter.position.y;
+    
+    // If opponent is within horizontal range but significantly above, they likely jumped over
+    return horizontalDistance < 80 && verticalDistance > 20;
+  }
+
+  /**
+   * Calculate if AI needs to turn based on opponent position
+   * @param {Object} aiFighter - AI fighter
+   * @param {Object} opponent - Opponent fighter
+   * @returns {boolean} True if AI needs to turn
+   */
+  calculateTurnNeeded(aiFighter, opponent) {
+    const dx = opponent.position.x - aiFighter.position.x;
+    
+    // Basic direction check
+    const basicTurnNeeded = (aiFighter.direction > 0 && dx < 0) || (aiFighter.direction < 0 && dx > 0);
+    
+    // Enhanced check for jumping scenarios
+    if (this.isJumping(opponent)) {
+      const horizontalDistance = Math.abs(dx);
+      const verticalDistance = Math.abs(opponent.position.y - aiFighter.position.y);
+      
+      // If opponent is jumping and close horizontally, consider turning
+      if (horizontalDistance < 60 && verticalDistance > 15) {
+        return true;
+      }
+    }
+    
+    return basicTurnNeeded;
+  }
+
+  /**
+   * Check if fighter is in a jumping state
+   * @param {Object} fighter - Fighter to check
+   * @returns {boolean} True if jumping
+   */
+  isJumping(fighter) {
+    const jumpingStates = [
+      FighterState.JUMP_START,
+      FighterState.JUMP_UP,
+      FighterState.JUMP_FORWARDS,
+      FighterState.JUMP_BACKWARDS
+    ];
+    return jumpingStates.includes(fighter.CurrentState);
   }
 
   /**

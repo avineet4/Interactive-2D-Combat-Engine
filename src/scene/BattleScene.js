@@ -46,7 +46,7 @@ export class BattleScene {
     this.changeScene = changeScene;
 
     // Initialize AI System with the provided API key
-    this.aiSystem = new AISystem("AIzaSyC-Cad_QDRzNj9cKB_R5u956i1hdznQwpY");
+    this.aiSystem = new AISystem("YOUR_API_KEY");
     this.aiControls = null;
     this.initializeAI();
 
@@ -341,11 +341,9 @@ export class BattleScene {
     this.camera.update(time, context);
     this.updateOverlays(time, context);
 
-    // Update AI system if available
-    if (this.aiSystem && this.fighters && this.fighters.length >= 2) {
+    // Update AI system if available and battle is active
+    if (this.aiSystem && this.fighters && this.fighters.length >= 2 && !this.battleEnded) {
       await this.aiSystem.update(this.fighters, this, time);
-      
-      // Disable keyboard controls for AI-controlled fighters
       this.updateFighterControls();
     }
 
@@ -359,25 +357,102 @@ export class BattleScene {
     }
   }
 
+  // Optimized fighter updates
+  updateFighters(time, context) {
+    for (const fighter of this.fighters) {
+      if (fighter && fighter.isActive()) {
+        if (time.previous < this.hurtTimer) {
+          fighter.updateHurtShake(time, this.hurtTimer);
+        } else {
+          fighter.update(time, context, this.camera);
+        }
+      }
+    }
+
+    // Check if KO animation is complete and victory state hasn't been set yet
+    if (this.battleEnded && this.koAnimationComplete && !this.victoryStateSet) {
+      if (this.fighters[this.winnerId]) {
+        this.fighters[this.winnerId].changeState(FighterState.VICTORY, time);
+        this.fighters[this.winnerId].victory = true;
+        this.victoryStateSet = true;
+
+        // Start the end sequence timer after setting victory state
+        this.completeEndSequence();
+      }
+    }
+  }
+
+  // Optimized entity updates
+  updateEntities(time, context) {
+    // Only update entities if there are any
+    if (this.entities && this.entities.length > 0) {
+      for (const entity of this.entities) {
+        if (entity && entity.update) {
+          entity.update(time, context, this.camera);
+        }
+      }
+    }
+  }
+
+  // Optimized shadow updates
+  updateShadows = (time) => {
+    if (this.shadows && this.shadows.length > 0) {
+      for (const shadow of this.shadows) {
+        if (shadow && shadow.update) {
+          shadow.update(time);
+        }
+      }
+    }
+  };
+
+  // Optimized overlay updates
+  updateOverlays(time, context) {
+    if (this.overlays && this.overlays.length > 0) {
+      for (const overlay of this.overlays) {
+        if (overlay && overlay.update) {
+          overlay.update(time, context, this.camera);
+        }
+      }
+    }
+  }
+
+  // Optimized drawing methods
   drawFighters(context) {
     for (const fighterId of this.FightersDrawOrder) {
-      this.fighters[fighterId].draw(context, this.camera);
+      const fighter = this.fighters[fighterId];
+      if (fighter && fighter.draw) {
+        fighter.draw(context, this.camera);
+      }
     }
   }
 
   drawShadows(context) {
-    this.shadows.map((shadow) => shadow.draw(context, this.camera));
+    if (this.shadows && this.shadows.length > 0) {
+      for (const shadow of this.shadows) {
+        if (shadow && shadow.draw) {
+          shadow.draw(context, this.camera);
+        }
+      }
+    }
   }
 
   drawEntities(context) {
-    for (const entity of this.entities) {
-      entity.draw(context, this.camera);
+    if (this.entities && this.entities.length > 0) {
+      for (const entity of this.entities) {
+        if (entity && entity.draw) {
+          entity.draw(context, this.camera);
+        }
+      }
     }
   }
 
   drawOverlays(context) {
-    for (const overlay of this.overlays) {
-      overlay.draw(context, this.camera);
+    if (this.overlays && this.overlays.length > 0) {
+      for (const overlay of this.overlays) {
+        if (overlay && overlay.draw) {
+          overlay.draw(context, this.camera);
+        }
+      }
     }
   }
 

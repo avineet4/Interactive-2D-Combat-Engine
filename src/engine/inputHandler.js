@@ -1,73 +1,89 @@
 import { Control, controls } from "../constants/control.js";
 import { FighterDirection } from "../constants/fighter.js";
 
-const heldKey = new Set(); //! Since Set only keeps unique values, duplicate key presses won't be added multiple times.
+// Optimized key state management
+const heldKey = new Set();
 const pressedKeys = new Set();
 
-// AI Virtual Input Support
-let aiInputs = new Map(); // playerId -> virtual input state
+// AI Virtual Input Support with caching
+let aiInputs = new Map();
+let aiInputsCache = new Map(); // Cache for AI input lookups
 
 export function setAIInputs(playerId, virtualInputState) {
   if (!aiInputs.has(playerId)) {
     aiInputs.set(playerId, {});
   }
   aiInputs.set(playerId, { ...virtualInputState });
+  
+  // Update cache
+  aiInputsCache.set(playerId, new Map());
+  for (const [control, value] of Object.entries(virtualInputState)) {
+    aiInputsCache.get(playerId).set(control, value);
+  }
 }
 
 export function clearAIInputs(playerId) {
   aiInputs.delete(playerId);
+  aiInputsCache.delete(playerId);
 }
 
 function isAIControlActive(playerId, control) {
-  const playerAI = aiInputs.get(playerId);
-  if (!playerAI) return false;
+  // Use cached lookup for better performance
+  const playerCache = aiInputsCache.get(playerId);
+  if (!playerCache) return false;
   
-  switch (control) {
-    case Control.LEFT:
-      return playerAI.left || false;
-    case Control.RIGHT:
-      return playerAI.right || false;
-    case Control.UP:
-      return playerAI.up || false;
-    case Control.DOWN:
-      return playerAI.down || false;
-    case Control.LIGHT_PUNCH:
-      return playerAI.lightPunch || false;
-    case Control.MEDIUM_PUNCH:
-      return playerAI.mediumPunch || false;
-    case Control.HEAVY_PUNCH:
-      return playerAI.heavyPunch || false;
-    case Control.LIGHT_KICK:
-      return playerAI.lightKick || false;
-    case Control.MEDIUM_KICK:
-      return playerAI.mediumKick || false;
-    case Control.HEAVY_KICK:
-      return playerAI.heavyKick || false;
-    default:
-      return false;
-  }
+  return playerCache.get(control) || false;
 }
 
-function handleKeyDown(event) {
-  event.preventDefault();
+// Optimized event handlers
+let keyDownHandler = null;
+let keyUpHandler = null;
 
+function handleKeyDown(event) {
+  // Prevent default only for game keys
+  if (isGameKey(event.code)) {
+    event.preventDefault();
+  }
   heldKey.add(event.code);
 }
 
 function handleKeyUp(event) {
-  event.preventDefault();
-
+  // Prevent default only for game keys
+  if (isGameKey(event.code)) {
+    event.preventDefault();
+  }
   heldKey.delete(event.code);
   pressedKeys.delete(event.code);
 }
 
+// Check if key is used by the game
+function isGameKey(keyCode) {
+  const gameKeys = new Set([
+    'KeyA', 'KeyD', 'KeyW', 'KeyS', 'KeyE', 'KeyR', 'KeyT', 'KeyF',
+    'Digit3', 'Digit4', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+    'ControlRight', 'ShiftRight', 'Enter', 'Quote'
+  ]);
+  return gameKeys.has(keyCode);
+}
+
 export function registerKeyboardEvents() {
-  addEventListener("keydown", handleKeyDown);
-  addEventListener("keyup", handleKeyUp);
+  // Remove existing handlers if any
+  if (keyDownHandler) {
+    removeEventListener("keydown", keyDownHandler);
+    removeEventListener("keyup", keyUpHandler);
+  }
+  
+  // Create new handlers
+  keyDownHandler = handleKeyDown;
+  keyUpHandler = handleKeyUp;
+  
+  addEventListener("keydown", keyDownHandler);
+  addEventListener("keyup", keyUpHandler);
 }
 
 export const isKeyDown = (code) => heldKey.has(code);
 export const isKeyUP = (code) => !heldKey.has(code);
+
 export function iskeyPressed(code) {
   if (heldKey.has(code) && !pressedKeys.has(code)) {
     pressedKeys.add(code);
@@ -75,34 +91,65 @@ export function iskeyPressed(code) {
   }
   return false;
 }
-export const isleft = (id) => isAIControlActive(id, Control.LEFT) || isKeyDown(controls[id].keyboard[Control.LEFT]);
-export const isright = (id) => isAIControlActive(id, Control.RIGHT) || isKeyDown(controls[id].keyboard[Control.RIGHT]);
-export const isup = (id) => isAIControlActive(id, Control.UP) || isKeyDown(controls[id].keyboard[Control.UP]);
-export const isdown = (id) => isAIControlActive(id, Control.DOWN) || isKeyDown(controls[id].keyboard[Control.DOWN]);
-export const isControlDown = (id) =>
-  isKeyDown(controls[id].keyboard[Control.LIGHT_PUNCH]);
 
-export const isControlPressed = (id) =>
-  iskeyPressed(controls[id].keyboard[Control.LIGHT_PUNCH]);
-export const isForward = (id, direction) =>
-  direction === FighterDirection.Right ? isright(id) : isleft(id);
+// Optimized input functions with early returns
+export const isleft = (id) => {
+  if (isAIControlActive(id, Control.LEFT)) return true;
+  return isKeyDown(controls[id].keyboard[Control.LEFT]);
+};
 
-export const isBackward = (id, direction) =>
-  direction === FighterDirection.Left ? isright(id) : isleft(id);
+export const isright = (id) => {
+  if (isAIControlActive(id, Control.RIGHT)) return true;
+  return isKeyDown(controls[id].keyboard[Control.RIGHT]);
+};
 
-export const isIdle = (id) =>
-  !(isleft(id) || isright(id) || isup(id) || isdown(id));
+export const isup = (id) => {
+  if (isAIControlActive(id, Control.UP)) return true;
+  return isKeyDown(controls[id].keyboard[Control.UP]);
+};
 
-export const isLightPunch = (id) =>
-  isAIControlActive(id, Control.LIGHT_PUNCH) || iskeyPressed(controls[id].keyboard[Control.LIGHT_PUNCH]);
-export const isMediumPunch = (id) =>
-  isAIControlActive(id, Control.MEDIUM_PUNCH) || iskeyPressed(controls[id].keyboard[Control.MEDIUM_PUNCH]);
-export const isHeavyPunch = (id) =>
-  isAIControlActive(id, Control.HEAVY_PUNCH) || iskeyPressed(controls[id].keyboard[Control.HEAVY_PUNCH]);
+export const isdown = (id) => {
+  if (isAIControlActive(id, Control.DOWN)) return true;
+  return isKeyDown(controls[id].keyboard[Control.DOWN]);
+};
 
-export const isLightKick = (id) =>
-  isAIControlActive(id, Control.LIGHT_KICK) || iskeyPressed(controls[id].keyboard[Control.LIGHT_KICK]);
-export const isMediumKick = (id) =>
-  isAIControlActive(id, Control.MEDIUM_KICK) || iskeyPressed(controls[id].keyboard[Control.MEDIUM_KICK]);
-export const isHeavyKick = (id) =>
-  isAIControlActive(id, Control.HEAVY_KICK) || iskeyPressed(controls[id].keyboard[Control.HEAVY_KICK]);
+export const isControlDown = (id) => isKeyDown(controls[id].keyboard[Control.LIGHT_PUNCH]);
+
+export const isControlPressed = (id) => iskeyPressed(controls[id].keyboard[Control.LIGHT_PUNCH]);
+
+export const isForward = (id, direction) => direction === FighterDirection.Right ? isright(id) : isleft(id);
+
+export const isBackward = (id, direction) => direction === FighterDirection.Left ? isright(id) : isleft(id);
+
+export const isIdle = (id) => !(isleft(id) || isright(id) || isup(id) || isdown(id));
+
+// Optimized attack functions
+export const isLightPunch = (id) => {
+  if (isAIControlActive(id, Control.LIGHT_PUNCH)) return true;
+  return iskeyPressed(controls[id].keyboard[Control.LIGHT_PUNCH]);
+};
+
+export const isMediumPunch = (id) => {
+  if (isAIControlActive(id, Control.MEDIUM_PUNCH)) return true;
+  return iskeyPressed(controls[id].keyboard[Control.MEDIUM_PUNCH]);
+};
+
+export const isHeavyPunch = (id) => {
+  if (isAIControlActive(id, Control.HEAVY_PUNCH)) return true;
+  return iskeyPressed(controls[id].keyboard[Control.HEAVY_PUNCH]);
+};
+
+export const isLightKick = (id) => {
+  if (isAIControlActive(id, Control.LIGHT_KICK)) return true;
+  return iskeyPressed(controls[id].keyboard[Control.LIGHT_KICK]);
+};
+
+export const isMediumKick = (id) => {
+  if (isAIControlActive(id, Control.MEDIUM_KICK)) return true;
+  return iskeyPressed(controls[id].keyboard[Control.MEDIUM_KICK]);
+};
+
+export const isHeavyKick = (id) => {
+  if (isAIControlActive(id, Control.HEAVY_KICK)) return true;
+  return iskeyPressed(controls[id].keyboard[Control.HEAVY_KICK]);
+};

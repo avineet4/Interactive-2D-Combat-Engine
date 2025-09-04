@@ -457,13 +457,12 @@ export class Fighter {
     this.handleIdleInit();
   }
   handleIdleState() {
-    // If controls are disabled, don't respond to inputs
-    if (!this.controlsEnabled) return;
-
     if (this.victory) {
       this.changeState(FighterState.VICTORY);
       return;
     }
+    
+    // Check for AI inputs first (these work even when controls are disabled)
     if (Control.isBackward(this.playerId, this.direction)) {
       this.changeState(FighterState.WALK_BACKWARDS);
     } else if (Control.isForward(this.playerId, this.direction)) {
@@ -486,7 +485,7 @@ export class Fighter {
       this.changeState(FighterState.HEAVY_KICK);
     }
 
-    // Only check direction if controls are enabled
+    // Only check direction if controls are enabled (for human input)
     if (this.controlsEnabled) {
       const newDirection = this.getDirection();
 
@@ -498,12 +497,6 @@ export class Fighter {
   }
 
   handleWalkForwardState() {
-    // If controls are disabled, transition to idle
-    if (!this.controlsEnabled) {
-      this.changeState(FighterState.IDLE);
-      return;
-    }
-
     if (!Control.isForward(this.playerId, this.direction)) {
       this.changeState(FighterState.IDLE);
     } else if (Control.isup(this.playerId))
@@ -521,18 +514,14 @@ export class Fighter {
     } else if (Control.isHeavyKick(this.playerId)) {
       this.changeState(FighterState.HEAVY_KICK);
     }
-    {
+    
+    // Only check direction if controls are enabled (for human input)
+    if (this.controlsEnabled) {
       this.direction = this.getDirection();
     }
   }
 
   handleWalkBackwardState() {
-    // If controls are disabled, transition to idle
-    if (!this.controlsEnabled) {
-      this.changeState(FighterState.IDLE);
-      return;
-    }
-
     if (!Control.isBackward(this.playerId, this.direction)) {
       this.changeState(FighterState.IDLE);
     } else if (Control.isup(this.playerId))
@@ -550,7 +539,9 @@ export class Fighter {
     } else if (Control.isHeavyKick(this.playerId)) {
       this.changeState(FighterState.HEAVY_KICK);
     }
-    {
+    
+    // Only check direction if controls are enabled (for human input)
+    if (this.controlsEnabled) {
       this.direction = this.getDirection();
     }
   }
@@ -579,6 +570,7 @@ export class Fighter {
       this.CurrentState = FighterState.CROUCH_UP;
     }
   }
+  
   handleCrouchUpState() {
     if (this.isAnimationCompleted()) {
       this.changeState(FighterState.IDLE);
@@ -587,12 +579,6 @@ export class Fighter {
 
   handleJumpStartState() {
     if (this.isAnimationCompleted()) {
-      // If controls are disabled, just jump straight up
-      if (!this.controlsEnabled) {
-        this.changeState(FighterState.JUMP_UP);
-        return;
-      }
-
       if (Control.isBackward(this.playerId, this.direction)) {
         this.changeState(FighterState.JUMP_BACKWARDS);
       } else if (Control.isForward(this.playerId, this.direction)) {
@@ -619,11 +605,16 @@ export class Fighter {
 
       this.handleIdleState();
     } else {
-      const newDirection = this.getDirection();
+      // Only check direction if controls are enabled (for human input)
+      if (this.controlsEnabled) {
+        const newDirection = this.getDirection();
 
-      if (newDirection !== this.direction) {
-        this.direction = newDirection;
-        newState = FighterState.IDLE_TURN;
+        if (newDirection !== this.direction) {
+          this.direction = newDirection;
+          newState = FighterState.IDLE_TURN;
+        } else {
+          if (!this.isAnimationCompleted()) return;
+        }
       } else {
         if (!this.isAnimationCompleted()) return;
       }
@@ -649,10 +640,12 @@ export class Fighter {
       this.changeState(FighterState.CROUCH);
     }
 
-    // Check for direction change
-    const newDirection = this.getDirection();
-    if (newDirection !== this.direction) {
-      this.direction = newDirection;
+    // Check for direction change only if controls are enabled (for human input)
+    if (this.controlsEnabled) {
+      const newDirection = this.getDirection();
+      if (newDirection !== this.direction) {
+        this.direction = newDirection;
+      }
     }
   }
   handleLightAttackReset() {
@@ -784,15 +777,62 @@ export class Fighter {
 
   updateAnimation(time) {
     const animation = this.animations[this.CurrentState];
-    const [, frameDelay] = animation[this.animationFrame];
-    if (time.previous <= this.animationTimer + frameDelay * FRAME_TIME) return;
-    this.animationTimer = time.previous;
+    if (!animation || !animation[this.animationFrame]) return;
 
-    if (frameDelay <= FrameDelay.FREEZE) return;
+    const [, frameDelay] = animation[this.animationFrame];
+    
+    // Use cached frame delay for better performance
+    if (time.previous <= this.animationTimer + frameDelay * FRAME_TIME) return;
+    
+    this.animationTimer = time.previous;
     this.animationFrame++;
 
     if (this.animationFrame >= animation.length) this.animationFrame = 0;
+    
+    // Update boxes for current frame
     this.boxes = this.getBoxes(animation[this.animationFrame][0]);
+  }
+
+  // Optimized draw method with reduced calculations
+  draw(context, camera) {
+    const [frameKey] = this.animations[this.CurrentState][this.animationFrame];
+    const [[[x, y, width, height], [originX, originY]]] = this.frames.get(frameKey);
+
+    // Cache position calculations
+    const drawX = Math.floor((this.position.x - this.hurtShake - camera.position.x) * this.direction) - originX;
+    const drawY = Math.floor(this.position.y - camera.position.y) - originY;
+
+    context.save();
+    context.scale(this.direction, 1);
+    context.drawImage(this.image, x, y, width, height, drawX, drawY, width, height);
+    context.restore();
+  }
+
+  // Optimized update method with conditional updates
+  update(time, context, camera) {
+    // Only update if fighter is active
+    if (!this.isActive()) return;
+    
+    this.states[this.CurrentState].update(time, context);
+    this.updatePosition(time);
+    this.updateSlide(time);
+    this.updateAnimation(time);
+    this.updateStageConstraints(time, context, camera);
+    
+    // Only check attack collision if attacking
+    if (this.isAttacking()) {
+      this.updateAttackBoxCollided(time);
+    }
+  }
+
+  // Check if fighter is active (not KO'd or in victory state)
+  isActive() {
+    return !this.victory && this.CurrentState !== FighterState.KO;
+  }
+
+  // Check if fighter is currently attacking
+  isAttacking() {
+    return this.CurrentState.includes('punch') || this.CurrentState.includes('kick');
   }
 
   updateAttackBoxCollided(time) {
@@ -888,37 +928,5 @@ export class Fighter {
       this.direction *
       time.secondsPassed;
     this.position.y += this.velocity.y * time.secondsPassed;
-  }
-
-  update(time, context, camera) {
-    this.states[this.CurrentState].update(time, context);
-    this.updatePosition(time);
-    this.updateSlide(time);
-    this.updateAnimation(time);
-    this.updateStageConstraints(time, context, camera);
-    this.updateAttackBoxCollided(time);
-  }
-
-  draw(context, camera) {
-    const [frameKey] = this.animations[this.CurrentState][this.animationFrame];
-    const [[[x, y, width, height], [originX, originY]]] =
-      this.frames.get(frameKey);
-
-    context.save(); //! save current state before inverting
-    context.scale(this.direction, 1); //! Inverting the sprites
-    context.drawImage(
-      this.image,
-      x,
-      y,
-      width,
-      height,
-      Math.floor(
-        (this.position.x - this.hurtShake - camera.position.x) * this.direction
-      ) - originX,
-      Math.floor(this.position.y - camera.position.y) - originY,
-      width,
-      height
-    );
-    context.restore(); //! restore state which was there  before inverting
   }
 }

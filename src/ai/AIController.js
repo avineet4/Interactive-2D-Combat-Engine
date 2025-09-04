@@ -17,7 +17,7 @@ export class AIController {
     // AI state management
     this.currentDecision = null;
     this.decisionTimer = 0;
-    this.decisionDuration = 200; // How long to execute a decision (ms)
+    this.decisionDuration = 400; // Increased from 200ms to 400ms for better optimization
     this.isEnabled = false;
     this.debugMode = false;
     
@@ -220,6 +220,12 @@ export class AIController {
     // Clear all inputs first
     this.clearAllInputs();
 
+    // Check if we need to handle jumping over scenario
+    if (this.shouldHandleJumpOverScenario(aiFighter)) {
+      this.handleJumpOverScenario(aiFighter);
+      return;
+    }
+
     switch (actionName) {
       // Movement actions
       case 'walk_forward':
@@ -292,6 +298,96 @@ export class AIController {
   }
 
   /**
+   * Force turn around when opponent jumps over
+   * @param {Object} aiFighter - AI fighter
+   */
+  forceTurnAround(aiFighter) {
+    if (!aiFighter.opponent) return;
+    
+    const opponent = aiFighter.opponent;
+    const dx = opponent.position.x - aiFighter.position.x;
+    
+    // Clear current inputs
+    this.clearAllInputs();
+    
+    // Force turn to face the opponent
+    if (dx > 0) {
+      // Opponent is to the right, turn right
+      this.virtualInputs.right = true;
+    } else {
+      // Opponent is to the left, turn left
+      this.virtualInputs.left = true;
+    }
+    
+    if (this.debugMode) {
+      console.log(`AI ${this.controllerId} forcing turn around: opponent at ${dx > 0 ? 'right' : 'left'}`);
+    }
+  }
+
+  /**
+   * Check if we should handle jumping over scenario
+   * @param {Object} aiFighter - AI fighter
+   * @returns {boolean} True if should handle jump over
+   */
+  shouldHandleJumpOverScenario(aiFighter) {
+    if (!aiFighter.opponent) return false;
+    
+    const opponent = aiFighter.opponent;
+    const dx = opponent.position.x - aiFighter.position.x;
+    const dy = opponent.position.y - aiFighter.position.y;
+    
+    // Check if opponent is jumping and above the AI
+    const isOpponentJumping = this.isJumping(opponent);
+    const isOpponentAbove = dy > 15;
+    const isCloseHorizontally = Math.abs(dx) < 60;
+    
+    // If opponent is jumping, above, and close horizontally, handle jump over
+    return isOpponentJumping && isOpponentAbove && isCloseHorizontally;
+  }
+
+  /**
+   * Handle jumping over scenario
+   * @param {Object} aiFighter - AI fighter
+   */
+  handleJumpOverScenario(aiFighter) {
+    const opponent = aiFighter.opponent;
+    const dx = opponent.position.x - aiFighter.position.x;
+    
+    // Force turn to face the opponent
+    if (dx > 0) {
+      // Opponent is to the right, turn right
+      this.virtualInputs.right = true;
+    } else {
+      // Opponent is to the left, turn left
+      this.virtualInputs.left = true;
+    }
+    
+    // Optionally jump to avoid or counter
+    if (Math.random() < 0.3) { // 30% chance to jump
+      this.virtualInputs.up = true;
+    }
+    
+    if (this.debugMode) {
+      console.log(`AI ${this.controllerId} handling jump over scenario: opponent at ${dx > 0 ? 'right' : 'left'}`);
+    }
+  }
+
+  /**
+   * Check if fighter is in a jumping state
+   * @param {Object} fighter - Fighter to check
+   * @returns {boolean} True if jumping
+   */
+  isJumping(fighter) {
+    const jumpingStates = [
+      'jump-start',
+      'jump-up',
+      'jump-forwards',
+      'jump-backwards'
+    ];
+    return jumpingStates.includes(fighter.CurrentState);
+  }
+
+  /**
    * Complete the current action and start next queued action
    */
   completeCurrentAction() {
@@ -357,11 +453,17 @@ export class AIController {
     // Apply virtual inputs to the input handler
     setAIInputs(this.controllerId, this.virtualInputs);
     
-    if (this.debugMode && Object.values(this.virtualInputs).some(v => v)) {
+    if (this.debugMode) {
       const activeInputs = Object.entries(this.virtualInputs)
         .filter(([key, value]) => value)
         .map(([key]) => key);
-      console.log(`AI Virtual Inputs: ${activeInputs.join(', ')}`);
+      
+      if (activeInputs.length > 0) {
+        console.log(`AI Player ${this.controllerId} Virtual Inputs: ${activeInputs.join(', ')}`);
+      }
+      
+      // Log the actual virtual inputs object for debugging
+      console.log(`AI Player ${this.controllerId} Virtual Inputs Object:`, this.virtualInputs);
     }
   }
 
@@ -389,7 +491,7 @@ export class AIController {
   }
 
   /**
-   * Reset AI state
+   * Reset AI state and clear memory
    */
   reset() {
     this.currentDecision = null;
